@@ -9,6 +9,7 @@ namespace TextReader
     {
         static void Main(string[] args)
         {
+            var reader = new MSAATextReader((IntPtr)0x00030be4);
         }
     }
 }
