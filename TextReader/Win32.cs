@@ -25,6 +25,14 @@ namespace TextReader
             string lpszClass,
             int sWindowTitle  /*HWND*/);
 
+        /// <summary>
+        /// 查找满足给定类名及窗口名的子窗口
+        /// </summary>
+        /// <param name="parentHandle">要查找子窗口的父窗口句柄</param>
+        /// <param name="childAfter">从该指定子窗口的后面开始查找</param>
+        /// <param name="className">查找的子窗口的类名</param>
+        /// <param name="windowTitle">查找的子窗口的窗口名</param>
+        /// <returns>返回满足条件的子窗口的句柄</returns>
         [DllImport("user32.dll", SetLastError = true)]
         public static extern IntPtr FindWindowEx(IntPtr parentHandle, IntPtr childAfter, string className, string windowTitle);
 
@@ -46,6 +54,15 @@ namespace TextReader
             IAccessible pacc,
             out IntPtr phwnd);
 
+        /// <summary>
+        /// 获得当前顶级窗口（特别注意不一定是hwndCurrent所指向的窗口）的第一层子项
+        /// </summary>
+        /// <param name="paccContainer"></param>
+        /// <param name="iChildStart"></param>
+        /// <param name="cChildren"></param>
+        /// <param name="rgvarChildren"></param>
+        /// <param name="pcObtained"></param>
+        /// <returns></returns>
         [DllImport("Oleacc.dll")]
         public static extern int AccessibleChildren(
         Accessibility.IAccessible paccContainer,
