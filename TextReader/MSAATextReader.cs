@@ -8,6 +8,18 @@ namespace TextReader
 {
     public class MSAATextReader
     {
+        private IAccessible msgContentWindow;
+        /// <summary>
+        /// 存储qq消息窗口的IAccessible类型引用
+        /// </summary>
+        public IAccessible MsgContentWindow
+        {
+            get
+            {
+                return msgContentWindow;
+            }
+        }
+
         /// <summary>
         /// 获取当前窗口的子项
         /// </summary>
@@ -19,14 +31,15 @@ namespace TextReader
             int pcObtained;
             Win32.AccessibleChildren(paccContainer, 0, paccContainer.accChildCount, rgvarChildren, out pcObtained);
             return rgvarChildren;
-        } 
+        }
 
         /// <summary>
-        /// 
+        /// 初始化实例
         /// </summary>
-        /// <param name="className">窗口类名</param>
-        /// <param name="windowTitle">窗口标题</param>
-        public MSAATextReader(string className, string windowTitle)
+        /// <param name="className">查找的目标窗口(子项所在的主窗口)类名</param>
+        /// <param name="windowTitle">查找的目标窗口(子项所在的主窗口)标题</param>
+        /// <param name="destinationAccName">查找的目标子项的AccName的值</param>
+        public MSAATextReader(string className, string windowTitle, string destinationAccName)
         {
             //获取指定窗口句柄
             IntPtr hwnd = Win32.FindWindowEx(IntPtr.Zero, IntPtr.Zero, className, windowTitle);
@@ -40,11 +53,8 @@ namespace TextReader
              */
             Win32.AccessibleObjectFromWindow(hwnd, (int)Win32.OBJID_CLIENT, ref guidCOM, ref IACurrent);
 
-            /*
-             * 获取当前句柄窗口的父窗口的IAccessible接口指针，指的是桌面上当前的所有窗口
-             * 通过inspect查看时，这些窗口的role值为window
-             */
-            IACurrent = (IAccessible)IACurrent.accParent;
+            if (IACurrent == null) throw new NullReferenceException(string.Format("找不到指定窗口名为\"{0}\"的窗口", windowTitle));
+            //当前句柄窗口包含的直接下级子项个数
             int childCount = IACurrent.accChildCount;
             //所有子窗口集合
             object[] windowChildren = new object[childCount];
@@ -54,32 +64,46 @@ namespace TextReader
              */
             Win32.AccessibleChildren(IACurrent, 0, childCount, windowChildren, out pcObtained);
 
-            IAccessible _inputBox = null;
+            //获取消息窗口对应的IAccessible类型引用
+            msgContentWindow = GetMessageContentWindow(windowChildren, destinationAccName);
+        }
 
+        /// <summary>
+        /// 遍历所有子项
+        ///     1.排除不是IAccessible类型的
+        ///     2.递归获取消息窗口对应的子项IAcessible类型的引用
+        /// </summary>
+        /// <param name="windowChildren">需要遍历的所有子项</param>
+        /// <param name="destinationAccName">查找的目标子项的AccName的值</param>
+        /// <returns></returns>
+        private IAccessible GetMessageContentWindow(object[] windowChildren, string destinationAccName)
+        {
+            if (msgContentWindow != null) return msgContentWindow;
             string accName;
             int accRole;
-            foreach (IAccessible child in windowChildren)
+            foreach (object child in windowChildren)
             {
-                //首先判断子项的Role值，33为【列表】，文件为34【列表项目】，我们需要找到0x2A【输入框】
-                accRole = (int)child.get_accRole(Win32.CHILDID_SELF);
-                accName = child.get_accName(Win32.CHILDID_SELF);
-                if (accRole == 9 && accName == windowTitle)
+                //判定子项是否是IAcessible类型 COM对象
+                var comobj = child.GetType().IsCOMObject;
+                if (comobj)
                 {
-                    object[] clientChild = GetAccessibleChildren(child);
-                    IAccessible client = (IAccessible)clientChild[1];
-                    clientChild = GetAccessibleChildren(client);
-
-                    foreach (IAccessible childChild in clientChild)
+                    var iACurrentChild = (IAccessible)child;
+                    accRole = (int)(iACurrentChild).get_accRole(Win32.CHILDID_SELF);
+                    accName = (iACurrentChild).get_accName(Win32.CHILDID_SELF);
+                    if (accName != destinationAccName)
                     {
-                        accRole = (int)childChild.get_accRole(Win32.CHILDID_SELF);
-                        accName = childChild.get_accName(Win32.CHILDID_SELF);
-                        if (accName == "消息")
-                        {
-                            _inputBox = childChild;
-                        }
+                        //继续遍历子项，直到查找到匹配的目的子项
+                        object[] childWindows = GetAccessibleChildren(iACurrentChild);
+                        GetMessageContentWindow(childWindows, accName);
+                    }
+                    else
+                    {
+                        msgContentWindow = iACurrentChild;
+                        break;
                     }
                 }
             }
+            return msgContentWindow;
         }
     }
 }
