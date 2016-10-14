@@ -59,9 +59,9 @@ namespace TextReader
         /// </summary>
         /// <param name="paccContainer"></param>
         /// <param name="iChildStart"></param>
-        /// <param name="cChildren"></param>
+        /// <param name="cChildren"><see cref="object[]"/>子项的数组指针</param>
         /// <param name="rgvarChildren"></param>
-        /// <param name="pcObtained"></param>
+        /// <param name="pcObtained">输出参数 参数值和cChildren值一致，除非是获取的子项不存在</param>
         /// <returns></returns>
         [DllImport("Oleacc.dll")]
         public static extern int AccessibleChildren(

@@ -1,7 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using Accessibility;
 
 namespace TextReader
@@ -20,6 +17,18 @@ namespace TextReader
             }
         }
 
+        private int _pcObtained;
+        /// <summary>
+        /// 获取到的实际子项的个数
+        /// </summary>
+        public int PcObtained
+        {
+            get
+            {
+                return _pcObtained;
+            }
+        }
+
         /// <summary>
         /// 获取当前窗口的子项
         /// </summary>
@@ -28,8 +37,7 @@ namespace TextReader
         private object[] GetAccessibleChildren(IAccessible paccContainer)
         {
             object[] rgvarChildren = new object[paccContainer.accChildCount];
-            int pcObtained;
-            Win32.AccessibleChildren(paccContainer, 0, paccContainer.accChildCount, rgvarChildren, out pcObtained);
+            Win32.AccessibleChildren(paccContainer, 0, paccContainer.accChildCount, rgvarChildren, out _pcObtained);
             return rgvarChildren;
         }
 
@@ -58,11 +66,10 @@ namespace TextReader
             int childCount = IACurrent.accChildCount;
             //所有子窗口集合
             object[] windowChildren = new object[childCount];
-            int pcObtained;
             /*
              * 获得当前顶级窗口（特别注意不一定是hwndCurrent所指向的窗口）的第一层子项
              */
-            Win32.AccessibleChildren(IACurrent, 0, childCount, windowChildren, out pcObtained);
+            Win32.AccessibleChildren(IACurrent, 0, childCount, windowChildren, out _pcObtained);
 
             //获取消息窗口对应的IAccessible类型引用
             msgContentWindow = GetMessageContentWindow(windowChildren, destinationAccName);
@@ -78,11 +85,12 @@ namespace TextReader
         /// <returns></returns>
         private IAccessible GetMessageContentWindow(object[] windowChildren, string destinationAccName)
         {
-            if (msgContentWindow != null) return msgContentWindow;
             string accName;
             int accRole;
+            //foreach中的child可能为整形，int代表的是childId
             foreach (object child in windowChildren)
             {
+                if (msgContentWindow != null) break;
                 //判定子项是否是IAcessible类型 COM对象
                 var comobj = child.GetType().IsCOMObject;
                 if (comobj)
@@ -90,16 +98,16 @@ namespace TextReader
                     var iACurrentChild = (IAccessible)child;
                     accRole = (int)(iACurrentChild).get_accRole(Win32.CHILDID_SELF);
                     accName = (iACurrentChild).get_accName(Win32.CHILDID_SELF);
-                    if (accName != destinationAccName)
-                    {
-                        //继续遍历子项，直到查找到匹配的目的子项
-                        object[] childWindows = GetAccessibleChildren(iACurrentChild);
-                        GetMessageContentWindow(childWindows, accName);
-                    }
-                    else
+                    if (accName == destinationAccName)
                     {
                         msgContentWindow = iACurrentChild;
                         break;
+                    }
+                    else
+                    {
+                        //继续遍历子项，直到查找到匹配的目的子项
+                        object[] childWindows = GetAccessibleChildren(iACurrentChild);
+                        GetMessageContentWindow(childWindows, destinationAccName);
                     }
                 }
             }
