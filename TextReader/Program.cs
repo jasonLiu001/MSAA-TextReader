@@ -47,6 +47,9 @@ namespace TextReader
                 Console.WriteLine("替换以后={0}", Regex.Replace(s, @"[^\p{L}\p{M}\p{Z}\p{N}\p{P}]", string.Empty));
             }
 
+            var temp = Regex.Replace(accValue, @"[^\p{L}\p{M}\p{Z}\p{N}\p{P}]", string.Empty);
+            Console.WriteLine(temp);
+
             Console.ReadKey();
         }
 
